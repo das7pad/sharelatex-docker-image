@@ -4,12 +4,6 @@
 
 FROM sharelatex/sharelatex-base:latest
 
-ENV baseDir .
-
-
-# Install app settings files
-# --------------------------
-ADD ${baseDir}/settings.coffee /etc/sharelatex/settings.coffee
 ENV SHARELATEX_CONFIG /etc/sharelatex/settings.coffee
 
 
@@ -21,15 +15,8 @@ RUN git clone https://github.com/overleaf/overleaf.git \
 
 # Install dependencies needed to run configuration scripts
 # --------------------------------------------------------
-ADD ${baseDir}/package.json /var/www/package.json
-ADD ${baseDir}/git-revision.js /var/www/git-revision.js
+COPY root/build/ /
 RUN cd /var/www && npm install
-
-
-# Replace overleaf/config/services.js with the list of available 
-# services in Overleaf Community Edition
-# --------------------------------------------------------------
-ADD ${baseDir}/services.js /var/www/sharelatex/config/services.js
 
 
 # Checkout services
@@ -54,26 +41,9 @@ RUN ln -s /var/www/sharelatex/clsi/bin/synctex /opt/synctex
 RUN	chown -R www-data:www-data /var/www/sharelatex;
 
 
-# Copy runit service startup scripts to its location
+# Copy the run time configuration files
 # --------------------------------------------------
-ADD ${baseDir}/runit /etc/service
-
-
-# Configure nginx
-# ---------------
-RUN rm /etc/nginx/sites-enabled/default
-ADD ${baseDir}/nginx/nginx.conf /etc/nginx/nginx.conf
-ADD ${baseDir}/nginx/sharelatex.conf /etc/nginx/sites-enabled/sharelatex.conf
-
-
-# Configure log rotation
-# ----------------------
-ADD ${baseDir}/logrotate/sharelatex /etc/logrotate.d/sharelatex
-
-
-# Copy Phusion Image startup scripts to its location
-# --------------------------------------------------
-COPY ${baseDir}/init_scripts/ /etc/my_init.d/
+COPY root/run/ /
 
 
 # Stores the version installed for each service
