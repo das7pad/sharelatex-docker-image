@@ -34,7 +34,21 @@ RUN cd /var/www \
 # Stores the version installed for each service
 # ---------------------------------------------
 &&  cd /var/www \
-&&    node git-revision > revisions.txt
+&&    node git-revision > revisions.txt \
+  \
+# Cleanup not needed artifacts
+# ----------------------------
+&&  rm -rf \
+# node-gyp build cache
+      /root/.node-gyp \
+# npm download cache
+      /root/.npm/ \
+# v8 cache and left over temporary directories
+      $(find /tmp/ -mindepth 1 -maxdepth 1) \
+# build dependencies
+      /var/www/node_modules \
+# git history
+      $(find /var/www/sharelatex -name .git)
 
 
 # Links CLSI sycntex to its default location
