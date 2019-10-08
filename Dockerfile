@@ -16,19 +16,25 @@ RUN git clone https://github.com/overleaf/overleaf.git \
 # Install dependencies needed to run configuration scripts
 # --------------------------------------------------------
 COPY root/build/ /
-RUN cd /var/www && npm install
-
-
+RUN cd /var/www \
+&&    npm install \
+  \
 # Checkout services
 # -----------------
-RUN cd /var/www/sharelatex && \
-	npm install && grunt install;
-
-
+&&  cd /var/www/sharelatex \
+&&    npm install \
+&&    grunt install \
+  \
 # install and compile services
 # ----------------------------
-RUN bash -c 'cd /var/www/sharelatex && source ./bin/install-services'
-RUN bash -c 'cd /var/www/sharelatex && source ./bin/compile-services'
+&&  cd /var/www/sharelatex \
+&&    bash ./bin/install-services \
+&&    bash ./bin/compile-services \
+  \
+# Stores the version installed for each service
+# ---------------------------------------------
+&&  cd /var/www \
+&&    node git-revision > revisions.txt
 
 
 # Links CLSI sycntex to its default location
@@ -44,11 +50,6 @@ RUN	chown -R www-data:www-data /var/www/sharelatex;
 # Copy the run time configuration files
 # --------------------------------------------------
 COPY root/run/ /
-
-
-# Stores the version installed for each service
-# ---------------------------------------------
-RUN cd /var/www && node git-revision > revisions.txt
 
 
 EXPOSE 80
