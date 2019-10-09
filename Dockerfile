@@ -4,12 +4,6 @@
 
 FROM sharelatex/sharelatex-base:latest
 
-ENV baseDir .
-
-
-# Install app settings files
-# --------------------------
-ADD ${baseDir}/settings.coffee /etc/sharelatex/settings.coffee
 ENV SHARELATEX_CONFIG /etc/sharelatex/settings.coffee
 
 
@@ -21,27 +15,40 @@ RUN git clone https://github.com/overleaf/overleaf.git \
 
 # Install dependencies needed to run configuration scripts
 # --------------------------------------------------------
-ADD ${baseDir}/package.json /var/www/package.json
-ADD ${baseDir}/git-revision.js /var/www/git-revision.js
-RUN cd /var/www && npm install
-
-
-# Replace overleaf/config/services.js with the list of available
-# services in Overleaf Community Edition
-# --------------------------------------------------------------
-ADD ${baseDir}/services.js /var/www/sharelatex/config/services.js
-
-
+COPY root/build/ /
+RUN cd /var/www \
+&&    npm install \
+  \
 # Checkout services
 # -----------------
-RUN cd /var/www/sharelatex && \
-	npm install && grunt install;
-
-
+&&  cd /var/www/sharelatex \
+&&    npm install \
+&&    grunt install \
+  \
 # install and compile services
 # ----------------------------
-RUN bash -c 'cd /var/www/sharelatex && source ./bin/install-services'
-RUN bash -c 'cd /var/www/sharelatex && source ./bin/compile-services'
+&&  cd /var/www/sharelatex \
+&&    bash ./bin/install-services \
+&&    bash ./bin/compile-services \
+  \
+# Stores the version installed for each service
+# ---------------------------------------------
+&&  cd /var/www \
+&&    node git-revision > revisions.txt \
+  \
+# Cleanup not needed artifacts
+# ----------------------------
+&&  rm -rf \
+# node-gyp build cache
+      /root/.node-gyp \
+# npm download cache
+      /root/.npm/ \
+# v8 cache and left over temporary directories
+      $(find /tmp/ -mindepth 1 -maxdepth 1) \
+# build dependencies
+      /var/www/node_modules \
+# git history
+      $(find /var/www/sharelatex -name .git)
 
 
 # Links CLSI sycntex to its default location
@@ -49,30 +56,9 @@ RUN bash -c 'cd /var/www/sharelatex && source ./bin/compile-services'
 RUN ln -s /var/www/sharelatex/clsi/bin/synctex /opt/synctex
 
 
-# Copy runit service startup scripts to its location
+# Copy the run time configuration files
 # --------------------------------------------------
-ADD ${baseDir}/runit /etc/service
-
-
-# Configure nginx
-# ---------------
-ADD ${baseDir}/nginx/nginx.conf /etc/nginx/nginx.conf
-ADD ${baseDir}/nginx/sharelatex.conf /etc/nginx/sites-enabled/sharelatex.conf
-
-
-# Configure log rotation
-# ----------------------
-ADD ${baseDir}/logrotate/sharelatex /etc/logrotate.d/sharelatex
-
-
-# Copy Phusion Image startup scripts to its location
-# --------------------------------------------------
-COPY ${baseDir}/init_scripts/ /etc/my_init.d/
-
-
-# Stores the version installed for each service
-# ---------------------------------------------
-RUN cd /var/www && node git-revision > revisions.txt
+COPY root/run/ /
 
 
 EXPOSE 80
